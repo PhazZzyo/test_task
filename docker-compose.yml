@@ -1,0 +1,40 @@
+version: "3"
+services:
+
+    backend:
+      build: './testapp'
+      command: bundle exec rails s -p 3000 -b '0.0.0.0'
+      #volumes:
+      #    - .:/testapp
+      ports:
+          - "3000:3000"
+      depends_on:
+          - postgres-db
+
+    postgres-db:
+      image: "postgres"
+      volumes:
+          - ./tmp/db:/var/lib/postgresql/data
+      environment:
+          POSTGRES_USER: "user"
+          POSTGRES_PASSWORD: "pass"
+
+    frontend:
+        build: './testContainerAngular'
+        volumes:
+            - .:/testContainerAngular/src
+        ports:
+            - "4200:4200"
+        depends_on:
+            - backend
+
+    nginx:
+        image: nginx
+        build: './nginx'
+        #volumes:
+        #    - .dist:/usr/share/nginx/html
+        depends_on:
+            - frontend
+        ports:
+            - "80:80"
+            - "443:443"

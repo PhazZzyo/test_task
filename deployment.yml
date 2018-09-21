@@ -1,0 +1,106 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend-deployment
+  labels:
+    app: backend
+  namespace: test_task
+spec:
+  containers:
+  - name: testapp
+    image: ./testapp
+    command: [bundle exec rails s -p 3000 -b '0.0.0.0']
+    ports:
+    - containerPort: 3000
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: db-deployment
+  labels:
+    app: postgres-db
+  namespace: test_task
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        name: postgres-db
+    spec:
+      containers:
+      - name: postgres-db
+        image: postgres
+        volumeMounts:
+        - mountPath: /tmp
+          name: tmp-volume
+      volumes:
+        - name: tmp-volume
+          emptyDir:
+            medium: Memory
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend-deployment
+  labels:
+    app: frontend
+  namespace: test_task
+spec:
+  replicas: 3
+  minReadySeconds: 15
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 1
+  spec:
+      containers:
+      - name: frontend
+        image: ./testContainerAngular
+        volumeMounts:
+          - mountPath: /testContainerAngular/src
+        ports:
+        - containerPort: 4200
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-deployment
+  labels:
+    app: nginx
+  namespace: test_task
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+      - name: nginx
+        image: nginx
+        ports:
+        - containerPort: 80
+
+---
+
+apiVersion: apps/v1
+kind: Service
+metadata:
+  name: nginx-service
+spec:
+  selector:
+    app: nginx
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 4200
